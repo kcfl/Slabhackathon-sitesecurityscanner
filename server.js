@@ -124,46 +124,24 @@ Return valid JSON in this exact structure:
   "top_priority_fix": "<the single most important thing to fix first>"
 }
 Make sure to populate both the root 'findings' array (with all combined findings) AND the 'categories' object so existing systems don't break.`;
-        
-        const aiResult = {
-  "overall_score": 85,
-  "summary": "Strong security posture with excellent header hygiene, though third-party static assets present a minimal trust surface.",
-  "categories": {
-    "third_party_scripts": {
-      "score": 90,
-      "findings": [
-        {
-          "issue": "External script loaded from github.githubassets.com.",
-          "severity": "low",
-          "recommendation": "Ensure Subresource Integrity (SRI) hashes are implemented for all assets loaded from this external CDN domain."
+        console.log('DEBUG - Key being sent:', JSON.stringify(apiKey), 'Length:', apiKey.length);
+        const fetchResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            })
+        });
+
+        if (!fetchResponse.ok) {
+            const errorText = await fetchResponse.text();
+            throw new Error(`Gemini API Error: ${fetchResponse.status} ${fetchResponse.statusText} - ${errorText}`);
         }
-      ]
-    },
-    "headers_and_cookies": {
-      "score": 80,
-      "findings": [
-        {
-          "issue": "Missing Strict-Transport-Security header.",
-          "severity": "medium",
-          "recommendation": "Enforce HSTS to prevent SSL stripping and downgrade attacks."
-        }
-      ]
-    }
-  },
-  "findings": [
-    {
-      "issue": "External script loaded from github.githubassets.com.",
-      "severity": "low",
-      "recommendation": "Ensure Subresource Integrity (SRI) hashes are implemented for all assets loaded from this external CDN domain."
-    },
-    {
-      "issue": "Missing Strict-Transport-Security header.",
-      "severity": "medium",
-      "recommendation": "Enforce HSTS to prevent SSL stripping and downgrade attacks."
-    }
-  ],
-  "top_priority_fix": "Enforce HSTS to prevent SSL stripping and downgrade attacks."
-};
+
+        const responseData = await fetchResponse.json();
+        const aiResultText = responseData.candidates[0].content.parts[0].text;
+        const aiResult = JSON.parse(aiResultText);
         
         res.json({
             raw_data: rawScanData,
